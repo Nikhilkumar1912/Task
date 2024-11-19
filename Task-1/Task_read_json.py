@@ -154,33 +154,16 @@ df_flattened = df_exploded.select(
 
 # COMMAND ----------
 
-from delta.tables import DeltaTable
-from pyspark.sql import functions as F
 delta_table = DeltaTable.forName(spark, "gold_table")
-
-
-merge_condition = "target.task_id = source.task_id AND target.question_id = source.question_id and target.product_code  = source.product_code"
-
 delta_table.alias("target") \
     .merge(
         df_flattened.alias("source"),
-        merge_condition
-    ).whenMatchedUpdateAll(
-        # condition="target.answer_id != source.answer_id"
-        # set={
-        #     "product_id": "source.product_id",
-        #     "product_code": "source.product_code",
-        #     "price_gross": "source.price_gross",
-        #     "price_net": "source.price_net",
-        #     "price_discount": "source.price_discount",
-        #     "price_incentive": "source.price_incentive",
-        #     "sales_unit": "source.sales_unit",
-        #     "sales_gross": "source.sales_gross",
-        #     "sales_net": "source.sales_net",
-        #     "promotion": "source.promotion",
-        #     "answer_id": "source.answer_id"
-        # }
-    ).whenNotMatchedInsertAll().execute()
+        "target.task_id = source.task_id AND target.question_id = source.question_id AND target.answer_id = source.answer_id"
+    ) \
+    .whenMatchedUpdateAll() \
+    .whenNotMatchedInsertAll() \
+    .whenNotMatchedBySourceDelete() \
+    .execute()
 
 
 # COMMAND ----------
@@ -195,7 +178,7 @@ delta_table.alias("target") \
 
 # COMMAND ----------
 
-df_flattened.write.mode("overwrite").saveAsTable("gold_table")
+# df_flattened.write.mode("overwrite").saveAsTable("gold_table")
 
 # COMMAND ----------
 
@@ -204,9 +187,9 @@ df_flattened.write.mode("overwrite").saveAsTable("gold_table")
 
 # COMMAND ----------
 
-from pyspark.sql.window import Window
-from pyspark.sql.functions import col,row_number,desc
-df = spark.read.table("gold_table")
-window_spec = Window.partitionBy("task_id","question_id","product_code").orderBy(col("date_time").desc())
-df_with_rank = df.withColumn("row_num",row_number().over(window_spec)).filter(col("row_num") == 1).select("*").drop("row_num")
-df_with_rank.display()
+# from pyspark.sql.window import Window
+# from pyspark.sql.functions import col,row_number,desc
+# df = spark.read.table("gold_table")
+# window_spec = Window.partitionBy("task_id","question_id").orderBy(col("lastmodified_date").desc())
+# df_with_rank = df.withColumn("rank",rank().over(window_spec)).filter(col("row_num") == 1).select("*").drop("rank")
+# df_with_rank.display()
